@@ -82,6 +82,100 @@ python -m spacy download en
 ## 5. پلتفرم RASA و نحوه عملکرد آن
 پلتفرم RASA یکی از ابزارهای متن‌باز محبوب برای ساخت چت‌بات‌ها و طبقه‌بندی نیت کاربران است. پیش از DIET، RASA از مدلی مبتنی بر تبدیل داده‌ها به وکتورهای با بعد بالا استفاده می‌کرد که به کمک آن‌ها می‌توانست نزدیکی پیام‌های کاربر به نیت‌های از پیش تعریف‌شده را تشخیص دهد.
 
+
+# راهنمای طبقه‌بندی نیت در RASA
+
+## مقدمه
+این راهنما به بررسی طبقه‌بندی نیت در RASA و نحوه استفاده از آن می‌پردازد. RASA یک چارچوب منبع باز برای ایجاد دستیارهای هوشمند و چت‌بات‌هاست. در اینجا به نکات اصلی و نمونه‌هایی از کد پرداخته شده است.
+
+## ۱. عبارات منظم (Regex)
+### الگوهای عبارات منظم
+- **zipcode**: `[0-9]{5}`
+- **greet**: `hey[^\s]*`
+- **job_id**: `job_?[0-9]{4,6}`
+- **email**: `[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}`
+
+### مترادف‌های موجود
+- **رزومه**:
+    - CV
+    - curriculum vitae
+    - bio-data
+    - resumé
+- **تمام‌وقت**:
+    - full time
+    - permanent
+    - fulltime
+- **نیمه‌وقت**:
+    - part time
+    - temporary
+    - parttime
+
+## ۲. آموزش طبقه‌بند نیت
+### کد
+```python
+# وارد کردن ماژول‌های لازم
+from rasa_nlu.training_data import load_data
+from rasa_nlu.model import Trainer
+from rasa_nlu import config
+
+# بارگذاری داده‌های آموزشی
+train_data = load_data('rasa-dataset.json')
+
+# ایجاد Trainer با تنظیمات پیکربندی
+trainer = Trainer(config.load("./config_spacy.yaml"))
+
+# آموزش مدل
+trainer.train(train_data)
+
+# ذخیره مدل آموزش‌دیده
+model_directory = trainer.persist('./projects/')
+```
+
+## ۳. طبقه‌بند نیت با استفاده از Scikit-learn
+### توضیحات
+- **استخراج ویژگی‌ها**: داده‌های متنی به فرمت عددی تبدیل می‌شوند.
+- **طبقه‌بند**: `RandomForestClassifier` از Scikit-learn استفاده می‌شود.
+- **آموزش**: مدل بر اساس ویژگی‌ها و نیت‌ها آموزش داده می‌شود.
+- **پیش‌بینی**: ورودی‌های جدید پردازش شده و نیت پیش‌بینی می‌شود.
+- **ذخیره‌سازی مدل**: بعد از آموزش، مدل ذخیره می‌شود.
+- **تنظیمات هایپرپارامتر**: گزینه‌هایی برای تنظیم پارامترهای مدل وجود دارد.
+- **وابستگی‌ها**: به Scikit-learn و دیگر کتابخانه‌ها نیاز دارد.
+
+## ۴. آزمایش مدل
+### کد
+```python
+# وارد کردن کلاس Interpreter
+from rasa_nlu.model import Interpreter
+
+# پیام نمونه
+message = "I am searching for jobs in Germany."
+
+# بارگذاری مدل
+interpreter = Interpreter.load('./projects/default/model_20230923-192843')
+
+# پردازش پیام
+output = interpreter.parse(message)
+
+# نمایش خروجی
+print(output)
+```
+
+## ۵. عملکرد مدل
+### نمونه نتایج
+- پیام: "I am looking for job, can you help me?"
+    - نیت: `update_profile` با اطمینان ۰.۳۰۲
+- پیام: "I am looking for a job in marketing, can you help me?"
+    - نیت: `update_profile` با اطمینان ۰.۳۲۸
+- پیام: "Show me the latest openings for data scientists."
+    - نیت: `career_advice` با اطمینان ۰.۳۸۳
+- پیام: "I would like to register."
+    - نیت: `skills_development` با اطمینان ۰.۳۰۵
+
+## ۶. جمع‌بندی
+در مقاله بعدی، به نسخه جدید RASA و استفاده از DIET classifier خواهیم پرداخت و مشکلات مربوط به طبقه‌بندی نیت در دامنه‌های مختلف را بررسی خواهیم کرد.
+
+---
+
 ---
 
 ## منابع
